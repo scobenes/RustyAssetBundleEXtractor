@@ -412,7 +412,7 @@ impl TpkUnityNode {
 /// Versions compare as these integers, which for the types in [`UnityVersionType`] is the
 /// order of [`UnityVersion`]. Other type bytes are kept as is, and only fail
 /// [`TpkVersion::unity_version`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TpkVersion(pub u64);
 
 impl TpkVersion {
@@ -436,6 +436,16 @@ impl TpkVersion {
             build_number: type_number,
             trailing_data: String::new(),
         })
+    }
+}
+
+/// Prints the [`UnityVersion`], or the raw integer if the type byte is not a [`UnityVersionType`].
+impl std::fmt::Debug for TpkVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.unity_version() {
+            Ok(version) => std::fmt::Debug::fmt(&version, f),
+            Err(_) => f.debug_tuple("TpkVersion").field(&self.0).finish(),
+        }
     }
 }
 
@@ -779,12 +789,15 @@ mod version_tests {
         for a in &versions {
             let tpk_version = TpkVersion::from(a);
             assert_eq!(&tpk_version.unity_version().unwrap(), a);
+            assert_eq!(format!("{tpk_version:?}"), format!("{a:?}"));
             for b in &versions {
                 let order = tpk_version.partial_cmp(&TpkVersion::from(b));
                 assert_eq!(order, a.partial_cmp(b), "{a} {b}");
             }
         }
 
-        assert!(TpkVersion(version(2, 0, 0, 6, 1)).unity_version().is_err());
+        let unknown = TpkVersion(version(2, 0, 0, 6, 1));
+        assert!(unknown.unity_version().is_err());
+        assert_eq!(format!("{unknown:?}"), "TpkVersion(562949953422849)");
     }
 }
